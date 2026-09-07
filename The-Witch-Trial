@@ -1,1 +1,496 @@
+local KazeUI = KazeUI or loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/libraryUI.txt"
+))()
 
+local Window = KazeUI:CreateWindow({
+    Title = "The Mimic",
+    Author = "Kaze",
+    Version = "The Witch Trial",
+    Size = UDim2.fromOffset(500, 370),
+    Icon = "79414074886215",
+    Theme = "Obsidian",
+    GlowStyle = "Cycle",
+    GlowColor = true,
+
+    PopupTitle = "Welcome to Kaze Hub!",
+    PopupContent = "Join Discord Server. If you found any bug please, report it to the Discord.",
+    DiscordLink = "https://discord.gg/DKGRny4DD",
+
+    OpenButton = {
+        Icon = "79414074886215",
+        Hidable = false,
+        Size = UDim2.fromOffset(60, 60)
+    },
+})
+
+local Player = Window:CreateTab({
+    Title = "Player",
+    Icon = "user"
+})
+
+local Workspace = (typeof(cloneref) == "function" and cloneref(game:GetService("Workspace"))) or game:GetService("Workspace")
+
+Player:Section("Client")
+
+local InstantPromptEnabled = false
+local promptTask = nil
+local originalHoldDurations = {}
+
+Player:Toggle({
+    Title = "Instant Prompt",
+    Default = false,
+    Callback = function(s)
+        InstantPromptEnabled = s
+
+        if promptTask then task.cancel(promptTask) promptTask = nil end
+        if InstantPromptEnabled then
+            originalHoldDurations = {}
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
+                if prompt:IsA("ProximityPrompt") then
+                    originalHoldDurations[prompt] = prompt.HoldDuration
+                    prompt.HoldDuration = 0
+                end
+            end
+            promptTask = task.spawn(function()
+                while InstantPromptEnabled do
+                    for _, prompt in ipairs(Workspace:GetDescendants()) do
+                        if prompt:IsA("ProximityPrompt") and prompt.HoldDuration ~= 0 then
+                            if not originalHoldDurations[prompt] then originalHoldDurations[prompt] = prompt.HoldDuration end
+                            prompt.HoldDuration = 0
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            for p, orig in pairs(originalHoldDurations or {}) do
+                if p and p.Parent then p.HoldDuration = orig end
+            end
+            originalHoldDurations = {}
+        end
+    end
+})
+
+local Lighting = (typeof(cloneref) == "function" and cloneref(game:GetService("Lighting"))) or game:GetService("Lighting")
+
+local FB_ENABLED = false
+local origAmbient = Lighting.Ambient
+local origOutdoorAmbient = Lighting.OutdoorAmbient
+local origBrightness = Lighting.Brightness
+local origClockTime = Lighting.ClockTime
+local origShadows = Lighting.GlobalShadows
+
+Player:Toggle({
+    Title = "FullBright",
+    Default = false,
+    Callback = function(s)
+        FB_ENABLED = s
+        if FB_ENABLED then
+            local function applyBright()
+                Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+                Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
+                Lighting.Brightness = 2
+                Lighting.ClockTime = 14
+                Lighting.GlobalShadows = false
+            end
+
+            applyBright()
+        else
+            Lighting.Ambient = origAmbient
+            Lighting.OutdoorAmbient = origOutdoorAmbient
+            Lighting.Brightness = origBrightness
+            Lighting.ClockTime = origClockTime
+            Lighting.GlobalShadows = origShadows
+        end
+    end
+})
+
+local RunService = (typeof(cloneref) == "function" and cloneref(game:GetService("RunService"))) or game:GetService("RunService")
+local Players = (typeof(cloneref) == "function" and cloneref(game:GetService("Players"))) or game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local NoclipEnabled = false
+local noclipTask
+
+Player:Toggle({
+    Title = "Noclip",
+    Default = false,
+    Callback = function(s)
+        NoclipEnabled = s
+
+        if noclipTask then task.cancel(noclipTask) noclipTask = nil end
+
+        if NoclipEnabled then
+            local _ncParts = {}
+            local _ncChar = nil
+            local function _ncRefresh()
+                local c = LocalPlayer.Character
+                if c == _ncChar and #_ncParts > 0 then return end
+                _ncChar = c
+                _ncParts = {}
+                if c then
+                    for _, p in ipairs(c:GetDescendants()) do
+                        if p:IsA("BasePart") then table.insert(_ncParts, p) end
+                    end
+                end
+            end
+            _ncRefresh()
+            noclipTask = task.spawn(function()
+                while NoclipEnabled do
+                    local c = LocalPlayer.Character
+                    if c ~= _ncChar then _ncRefresh() end
+                    for i = 1, #_ncParts do
+                        local p = _ncParts[i]
+                        if p and p.Parent and p.CanCollide then p.CanCollide = false end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local TPWalkSpeed = 1
+local TPWalkEnabled = false
+local tpWalkTask
+
+Player:Slider({
+    Title = "TP Walk Speed",
+    Min = 1,
+    Max = 10,
+    Default = 1,
+    Callback = function(v)
+        TPWalkSpeed = v
+    end
+})
+
+Player:Toggle({
+    Title = "Enable TP Walk",
+    Default = false,
+    Callback = function(s)
+        TPWalkEnabled = s
+
+        if tpWalkTask then task.cancel(tpWalkTask) tpWalkTask = nil end
+
+        if TPWalkEnabled then
+            tpWalkTask = task.spawn(function()
+                while TPWalkEnabled do
+                    local character = LocalPlayer.Character
+                    if character then
+                        local hrp = character:FindFirstChild("HumanoidRootPart")
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                            hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * (TPWalkSpeed * 0.35))
+                        end
+                    end
+                    task.wait(0.03)
+                end
+            end)
+        end
+    end
+})
+
+local TargetFlySpeed = 16
+local FLY_ENABLED = false
+local flyTask = nil
+
+Player:Slider({
+    Title = "Fly Speed",
+    Min = 16,
+    Max = 100,
+    Default = 16,
+    Callback = function(val)
+        TargetFlySpeed = val
+    end
+})
+
+Player:Toggle({
+    Title = "Enable Fly",
+    Default = false,
+    Callback = function(state)
+        FLY_ENABLED = state
+
+        if flyTask then task.cancel(flyTask) flyTask = nil end
+        local character = LocalPlayer.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.PlatformStand = false end
+        if hrp then
+            hrp.Anchored = false
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.AssemblyLinearVelocity = Vector3.zero
+        end
+        if FLY_ENABLED then
+            local camera = Workspace.CurrentCamera
+            flyTask = task.spawn(function()
+                while FLY_ENABLED do
+                    local character = LocalPlayer.Character
+                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                    if hrp and humanoid then
+                        local moveDir = humanoid.MoveDirection
+                        if moveDir.Magnitude > 0 then
+                            hrp.Anchored = false
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            local cameraCF = camera.CFrame
+                            local relativeVector = cameraCF:VectorToObjectSpace(moveDir)
+                            local flyDirection = (cameraCF.RightVector * relativeVector.X) + (cameraCF.LookVector * -relativeVector.Z)
+                            if flyDirection.Magnitude > 0 then flyDirection = flyDirection.Unit end
+                            hrp.CFrame = CFrame.lookAlong(hrp.Position, flyDirection) + (flyDirection * (TargetFlySpeed * 0.03))
+                        else
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hrp.AssemblyAngularVelocity = Vector3.zero
+                            hrp.Anchored = true
+                        end
+                    end
+                    task.wait(0.03)
+                end
+            end)
+        end
+    end
+})
+
+local TWT=Window:CreateTab({
+    Title="The Witch Trial",
+    Icon="ghost"
+})
+
+local TweenService=game:GetService("TweenService")
+local RunService=game:GetService("RunService")
+local Players=game:GetService("Players")
+local LocalPlayer=Players.LocalPlayer
+local Workspace=game:GetService("Workspace")
+
+local function getHRP()
+    local character=LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function getTeleportPart()
+    local teleporter=Workspace:FindFirstChild("Game Teleporter")
+    if not teleporter then return nil end
+    if teleporter:IsA("BasePart") then
+        return teleporter
+    end
+    if teleporter:IsA("Model") then
+        return teleporter.PrimaryPart or teleporter:FindFirstChildWhichIsA("BasePart",true)
+    end
+    return teleporter:FindFirstChildWhichIsA("BasePart",true)
+end
+
+local function teleportToGameTeleporter()
+    local hrp=getHRP()
+    local teleporter=getTeleportPart()
+    if hrp and teleporter then
+        hrp.CFrame=teleporter.CFrame
+    end
+end
+
+TWT:Section("Stage I")
+
+TWT:Button({
+    Title="Auto Win",
+    Callback=function()
+        teleportToGameTeleporter()
+    end
+})
+
+TWT:Section("Stage II")
+
+TWT:Button({
+    Title="Auto Win",
+    Callback=function()
+        teleportToGameTeleporter()
+    end
+})
+
+TWT:Section("Stage III")
+
+TWT:Button({
+    Title="Auto Win",
+    Callback=function()
+        teleportToGameTeleporter()
+    end
+})
+
+local twtESPEnabled=false
+local twtESPObjects={}
+local twtESPConnections={}
+local twtESPModels={}
+
+local function getPartPosition(obj)
+    if not obj then return nil end
+
+    if obj:IsA("BasePart") then
+        return obj.Position
+    end
+
+    if obj:IsA("Model") then
+        if obj.PrimaryPart then
+            return obj.PrimaryPart.Position
+        end
+
+        local part=obj:FindFirstChildWhichIsA("BasePart",true)
+        if part then
+            return part.Position
+        end
+
+        local ok,cf=obj:GetBoundingBox()
+        if ok and cf then
+            return cf.Position
+        end
+    end
+
+    return nil
+end
+
+local function clearTWTESP()
+    for _,obj in ipairs(twtESPObjects) do
+        if obj then
+            pcall(function()
+                obj:Destroy()
+            end)
+        end
+    end
+
+    for _,conn in ipairs(twtESPConnections) do
+        if conn then
+            pcall(function()
+                conn:Disconnect()
+            end)
+        end
+    end
+
+    twtESPObjects={}
+    twtESPConnections={}
+    twtESPModels={}
+end
+
+local function createTWTESP(model)
+    if not model or not model.Parent then return end
+    if twtESPModels[model] then return end
+
+    local partToAdorn=nil
+
+    if model:IsA("Model") then
+        partToAdorn=model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart",true)
+    elseif model:IsA("BasePart") then
+        partToAdorn=model
+    end
+
+    if not partToAdorn then return end
+
+    twtESPModels[model]=true
+
+    local highlight=Instance.new("Highlight")
+    highlight.Name="TWT_ESP_Highlight"
+    highlight.FillColor=Color3.fromRGB(255,0,0)
+    highlight.OutlineColor=Color3.fromRGB(255,255,255)
+    highlight.FillTransparency=0.5
+    highlight.OutlineTransparency=0
+    highlight.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee=model
+    highlight.Parent=model
+
+    table.insert(twtESPObjects,highlight)
+
+    local billboard=Instance.new("BillboardGui")
+    billboard.Name="TWT_ESP_Billboard"
+    billboard.Size=UDim2.new(0,150,0,35)
+    billboard.StudsOffset=Vector3.new(0,2,0)
+    billboard.AlwaysOnTop=true
+    billboard.Parent=partToAdorn
+
+    table.insert(twtESPObjects,billboard)
+
+    local text=Instance.new("TextLabel")
+    text.BackgroundTransparency=1
+    text.Size=UDim2.new(1,0,1,0)
+    text.TextStrokeTransparency=0
+    text.TextStrokeColor3=Color3.fromRGB(0,0,0)
+    text.TextColor3=Color3.fromRGB(255,0,0)
+    text.TextScaled=false
+    text.TextSize=13
+    text.Font=Enum.Font.SourceSansBold
+    text.Text=model.Name
+    text.Parent=billboard
+
+    local lastUpdate=0
+
+    local conn=RunService.Heartbeat:Connect(function()
+        if tick()-lastUpdate<0.4 then return end
+        lastUpdate=tick()
+
+        if not twtESPEnabled or not model.Parent then
+            twtESPModels[model]=nil
+
+            pcall(function()
+                billboard:Destroy()
+            end)
+
+            pcall(function()
+                highlight:Destroy()
+            end)
+
+            return
+        end
+
+        local character=LocalPlayer.Character
+        local hrp=character and character:FindFirstChild("HumanoidRootPart")
+        local targetPos=getPartPosition(model)
+
+        if hrp and targetPos then
+            local distance=(hrp.Position-targetPos).Magnitude
+            text.Text=model.Name.."\n["..math.floor(distance).."]"
+        else
+            text.Text=model.Name
+        end
+    end)
+
+    table.insert(twtESPConnections,conn)
+end
+
+TWT:Toggle({
+    Title="ESP Monsters",
+    Default=false,
+    Callback=function(state)
+        twtESPEnabled=state
+        clearTWTESP()
+
+        if not state then
+            return
+        end
+
+        local gameAI=Workspace:FindFirstChild("GameAI")
+        if not gameAI then
+            return
+        end
+
+        for _,obj in ipairs(gameAI:GetChildren()) do
+            if obj:IsA("Model") then
+                createTWTESP(obj)
+            end
+        end
+
+        local childAddedConnection=gameAI.ChildAdded:Connect(function(obj)
+            if not twtESPEnabled then return end
+
+            if obj:IsA("Model") then
+                task.wait(0.1)
+
+                if twtESPEnabled and obj.Parent then
+                    createTWTESP(obj)
+                end
+            end
+        end)
+
+        table.insert(twtESPConnections,childAddedConnection)
+
+        local childRemovedConnection=gameAI.ChildRemoved:Connect(function(obj)
+            twtESPModels[obj]=nil
+        end)
+
+        table.insert(twtESPConnections,childRemovedConnection)
+    end
+})
