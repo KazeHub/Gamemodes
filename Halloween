@@ -3,9 +3,9 @@ local KazeUI = KazeUI or loadstring(game:HttpGet(
 ))()
 
 local Window = KazeUI:CreateWindow({
-    Title = "The Mimic",
-    Author = "Kaze",
-    Version = "Halloween",
+    Title = "THE MIMIC",
+    Author = "KAZE",
+    Version = "HALLOWEEN",
     Size = UDim2.fromOffset(500, 370),
     Icon = "79414074886215",
     Theme = "Obsidian",
@@ -13,8 +13,9 @@ local Window = KazeUI:CreateWindow({
     GlowColor = true,
 
     PopupTitle = "Welcome to Kaze Hub!",
-    PopupContent = "Join Discord Server. If you found any bug please, report it to the Discord.",
+    PopupContent = "Thank you for using my script! If you found any bug, please report it to the discord.",
     DiscordLink = "https://discord.gg/DKGRny4DD",
+    YoutubeLink = "https://www.youtube.com/@Kaze_Hub",
 
     OpenButton = {
         Icon = "79414074886215",
@@ -33,40 +34,31 @@ local Workspace = (typeof(cloneref) == "function" and cloneref(game:GetService("
 Player:Section("Client")
 
 local InstantPromptEnabled = false
-local promptTask = nil
-local originalHoldDurations = {}
+local promptConnection
 
 Player:Toggle({
     Title = "Instant Prompt",
     Default = false,
     Callback = function(s)
         InstantPromptEnabled = s
-
-        if promptTask then task.cancel(promptTask) promptTask = nil end
+        
+        if promptConnection then
+            promptConnection:Disconnect()
+            promptConnection = nil
+        end
+        
         if InstantPromptEnabled then
-            originalHoldDurations = {}
             for _, prompt in ipairs(Workspace:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
-                    originalHoldDurations[prompt] = prompt.HoldDuration
                     prompt.HoldDuration = 0
                 end
             end
-            promptTask = task.spawn(function()
-                while InstantPromptEnabled do
-                    for _, prompt in ipairs(Workspace:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") and prompt.HoldDuration ~= 0 then
-                            if not originalHoldDurations[prompt] then originalHoldDurations[prompt] = prompt.HoldDuration end
-                            prompt.HoldDuration = 0
-                        end
-                    end
-                    task.wait(0.5)
+            
+            promptConnection = Workspace.DescendantAdded:Connect(function(descendant)
+                if descendant:IsA("ProximityPrompt") then
+                    descendant.HoldDuration = 0
                 end
             end)
-        else
-            for p, orig in pairs(originalHoldDurations or {}) do
-                if p and p.Parent then p.HoldDuration = orig end
-            end
-            originalHoldDurations = {}
         end
     end
 })
@@ -74,6 +66,7 @@ Player:Toggle({
 local Lighting = (typeof(cloneref) == "function" and cloneref(game:GetService("Lighting"))) or game:GetService("Lighting")
 
 local FB_ENABLED = false
+local fbConnection
 local origAmbient = Lighting.Ambient
 local origOutdoorAmbient = Lighting.OutdoorAmbient
 local origBrightness = Lighting.Brightness
@@ -85,6 +78,11 @@ Player:Toggle({
     Default = false,
     Callback = function(s)
         FB_ENABLED = s
+        if fbConnection then 
+            fbConnection:Disconnect() 
+            fbConnection = nil
+        end
+        
         if FB_ENABLED then
             local function applyBright()
                 Lighting.Ambient = Color3.fromRGB(178, 178, 178)
@@ -93,8 +91,9 @@ Player:Toggle({
                 Lighting.ClockTime = 14
                 Lighting.GlobalShadows = false
             end
-
+            
             applyBright()
+            fbConnection = Lighting.Changed:Connect(applyBright)
         else
             Lighting.Ambient = origAmbient
             Lighting.OutdoorAmbient = origOutdoorAmbient
@@ -110,40 +109,28 @@ local Players = (typeof(cloneref) == "function" and cloneref(game:GetService("Pl
 local LocalPlayer = Players.LocalPlayer
 
 local NoclipEnabled = false
-local noclipTask
+local noclipConnection
 
 Player:Toggle({
     Title = "Noclip",
     Default = false,
     Callback = function(s)
         NoclipEnabled = s
-
-        if noclipTask then task.cancel(noclipTask) noclipTask = nil end
-
+        
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        
         if NoclipEnabled then
-            local _ncParts = {}
-            local _ncChar = nil
-            local function _ncRefresh()
-                local c = LocalPlayer.Character
-                if c == _ncChar and #_ncParts > 0 then return end
-                _ncChar = c
-                _ncParts = {}
-                if c then
-                    for _, p in ipairs(c:GetDescendants()) do
-                        if p:IsA("BasePart") then table.insert(_ncParts, p) end
+            noclipConnection = RunService.Stepped:Connect(function()
+                local character = LocalPlayer.Character
+                if character then
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            if part.CanCollide then part.CanCollide = false end
+                        end
                     end
-                end
-            end
-            _ncRefresh()
-            noclipTask = task.spawn(function()
-                while NoclipEnabled do
-                    local c = LocalPlayer.Character
-                    if c ~= _ncChar then _ncRefresh() end
-                    for i = 1, #_ncParts do
-                        local p = _ncParts[i]
-                        if p and p.Parent and p.CanCollide then p.CanCollide = false end
-                    end
-                    task.wait(0.1)
                 end
             end)
         end
@@ -152,7 +139,7 @@ Player:Toggle({
 
 local TPWalkSpeed = 1
 local TPWalkEnabled = false
-local tpWalkTask
+local tpWalkConnection
 
 Player:Slider({
     Title = "TP Walk Speed",
@@ -170,20 +157,21 @@ Player:Toggle({
     Callback = function(s)
         TPWalkEnabled = s
 
-        if tpWalkTask then task.cancel(tpWalkTask) tpWalkTask = nil end
+        if tpWalkConnection then
+            tpWalkConnection:Disconnect()
+            tpWalkConnection = nil
+        end
 
         if TPWalkEnabled then
-            tpWalkTask = task.spawn(function()
-                while TPWalkEnabled do
-                    local character = LocalPlayer.Character
-                    if character then
-                        local hrp = character:FindFirstChild("HumanoidRootPart")
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
-                        if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
-                            hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * (TPWalkSpeed * 0.35))
-                        end
+            tpWalkConnection = RunService.Heartbeat:Connect(function(dt)
+                local character = LocalPlayer.Character
+                if character then
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    
+                    if hrp and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                        hrp.CFrame = hrp.CFrame + (humanoid.MoveDirection * (TPWalkSpeed * 0.35))
                     end
-                    task.wait(0.03)
                 end
             end)
         end
@@ -192,7 +180,7 @@ Player:Toggle({
 
 local TargetFlySpeed = 16
 local FLY_ENABLED = false
-local flyTask = nil
+local flyConnection
 
 Player:Slider({
     Title = "Fly Speed",
@@ -209,48 +197,69 @@ Player:Toggle({
     Default = false,
     Callback = function(state)
         FLY_ENABLED = state
-
-        if flyTask then task.cancel(flyTask) flyTask = nil end
-        local character = LocalPlayer.Character
-        local hrp = character and character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.PlatformStand = false end
-        if hrp then
-            hrp.Anchored = false
-            hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.AssemblyLinearVelocity = Vector3.zero
+        
+        local function stopFly()
+            if flyConnection then 
+                flyConnection:Disconnect() 
+                flyConnection = nil 
+            end
+            
+            local character = LocalPlayer.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+            if hrp then
+                hrp.Anchored = false
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
         end
+        
+        stopFly()
+        
         if FLY_ENABLED then
             local camera = Workspace.CurrentCamera
-            flyTask = task.spawn(function()
-                while FLY_ENABLED do
-                    local character = LocalPlayer.Character
-                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                    if hrp and humanoid then
-                        local moveDir = humanoid.MoveDirection
-                        if moveDir.Magnitude > 0 then
-                            hrp.Anchored = false
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            local cameraCF = camera.CFrame
-                            local relativeVector = cameraCF:VectorToObjectSpace(moveDir)
-                            local flyDirection = (cameraCF.RightVector * relativeVector.X) + (cameraCF.LookVector * -relativeVector.Z)
-                            if flyDirection.Magnitude > 0 then flyDirection = flyDirection.Unit end
-                            hrp.CFrame = CFrame.lookAlong(hrp.Position, flyDirection) + (flyDirection * (TargetFlySpeed * 0.03))
-                        else
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hrp.AssemblyAngularVelocity = Vector3.zero
-                            hrp.Anchored = true
+            
+            flyConnection = RunService.RenderStepped:Connect(function(dt)
+                local character = LocalPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                
+                if hrp and humanoid then
+                    local moveDir = humanoid.MoveDirection
+                    
+                    if moveDir.Magnitude > 0 then
+                        hrp.Anchored = false
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        
+                        local cameraCF = camera.CFrame
+                        local relativeVector = cameraCF:VectorToObjectSpace(moveDir)
+                        local flyDirection = (cameraCF.RightVector * relativeVector.X) + (cameraCF.LookVector * -relativeVector.Z)
+                        
+                        if flyDirection.Magnitude > 0 then
+                            flyDirection = flyDirection.Unit
                         end
+                        
+                        hrp.CFrame = CFrame.lookAlong(hrp.Position, flyDirection) + (flyDirection * (TargetFlySpeed * dt))
+                    else
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        hrp.Anchored = true
                     end
-                    task.wait(0.03)
                 end
             end)
         end
     end
 })
 
+
+--------------------------------------------------
+-- GLOBAL SERVICES & CORE HELPERS
+--------------------------------------------------
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -285,7 +294,7 @@ end
 
 local function firePrompt(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
-
+    
     if fireproximityprompt then
         fireproximityprompt(prompt)
     else
@@ -299,6 +308,9 @@ local function firePrompt(prompt)
     return true
 end
 
+--------------------------------------------------
+-- TABS CREATION
+--------------------------------------------------
 local HalloweenTab = Window:CreateTab({ Title = "Halloween", Icon = "ghost" })
 
 local halloweenMonsterESPEnabled=false
@@ -384,11 +396,12 @@ local function CreateHalloweenMonsterESP(obj)
         if tick()-lastUpdate<0.4 then return end
         lastUpdate=tick()
 
-        if not halloweenMonsterESPEnabled or not obj.Parent then
+        if not halloweenMonsterESPEnabled or not obj or not obj.Parent then
             pcall(function()
                 highlight:Destroy()
                 billboard:Destroy()
             end)
+            if conn then conn:Disconnect() end
             return
         end
 
@@ -451,11 +464,15 @@ HalloweenTab:Toggle({
     end
 })
 
+--------------------------------------------------
+-- INSIDE SECTIONUI (CANDY)
+--------------------------------------------------
 local CandySectionUI = HalloweenTab:SectionUI({ Title = "Candy", Open = true })
 local CandyGroup = CandySectionUI:Group({ Title = "Candy Options", Open = true })
 
 local espHighlights = {}
 
+-- 1. Toggle ESP Candy
 CandyGroup:Toggle({
     Title = "ESP Candy",
     Default = false,
@@ -501,6 +518,7 @@ CandyGroup:Toggle({
     end
 })
 
+-- 2. Button Collect Candy
 CandyGroup:Button({
     Title = "Collect Candy",
     Callback = function()
@@ -525,10 +543,11 @@ CandyGroup:Button({
             if candy and candy.Parent and candy:IsDescendantOf(Workspace) then
                 local part = getModelPart(candy)
                 if part then
-
+                    -- Teleport delay 0.2s
                     hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.1)
 
+                    -- Fire 1 to 5 times or until the object is destroyed
                     for fireCount = 1, 5 do
                         if not candy or not candy.Parent or not candy:IsDescendantOf(Workspace) then
                             break
@@ -537,7 +556,7 @@ CandyGroup:Button({
                         local prompt = getPrompt(candy)
                         if prompt then
                             firePrompt(prompt)
-                            task.wait(0.016)
+                            task.wait(0.016) -- Fire delay 0.1s
                         else
                             task.wait(0.016)
                         end
@@ -552,7 +571,9 @@ CandyGroup:Button({
 })
 
 HalloweenTab:Section("Stage I")
-
+--------------------------------------------------
+-- OUTSIDE SECTIONUI (AUTO WIN)
+--------------------------------------------------
 HalloweenTab:Button({
     Title = "Auto Win",
     Callback = function()
@@ -574,14 +595,16 @@ HalloweenTab:Button({
 
         if #puzzleItems == 0 then return end
 
+        -- 1. Collect all Puzzle Items inside the folder (Fires 1 to 5 times each)
         for _, puzzleItem in ipairs(puzzleItems) do
             if puzzleItem and puzzleItem.Parent and puzzleItem:IsDescendantOf(Workspace) then
                 local part = getModelPart(puzzleItem)
                 if part then
-
+                    -- Teleport delay 0.2s
                     hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.2)
 
+                    -- Fire 1 to 5 times per item or until destroyed
                     for fireCount = 1, 5 do
                         if not puzzleItem or not puzzleItem.Parent or not puzzleItem:IsDescendantOf(Workspace) then
                             break
@@ -590,7 +613,7 @@ HalloweenTab:Button({
                         local prompt = getPrompt(puzzleItem)
                         if prompt then
                             firePrompt(prompt)
-                            task.wait(0.1)
+                            task.wait(0.1) -- Fire delay 0.1s
                         else
                             task.wait(0.1)
                         end
@@ -599,6 +622,7 @@ HalloweenTab:Button({
             end
         end
 
+        -- 2. Teleport to workspace.Map.Well and fire 3 times
         local mapFolder = Workspace:FindFirstChild("Map")
         local wellObj = mapFolder and mapFolder:FindFirstChild("Well")
 
@@ -606,14 +630,14 @@ HalloweenTab:Button({
             local wellPart = getModelPart(wellObj)
             if wellPart then
                 hrp.CFrame = wellPart.CFrame + Vector3.new(0, 4, 0)
-                task.wait(0.2)
+                task.wait(0.2) -- Teleport delay 0.2s
 
                 for i = 1, 3 do
                     local wellPrompt = getPrompt(wellObj)
                     if wellPrompt then
                         firePrompt(wellPrompt)
                     end
-                    task.wait(0.5)
+                    task.wait(0.5) -- 0.5s delay between fires
                 end
             end
         end
@@ -718,17 +742,18 @@ HalloweenTab:Toggle({
                     end
                 end
 
+                -- Continuous monitoring loop
                 local triggered = false
                 while autoCandleEnabled do
                     local currentText = timerLabel.ContentText:gsub("%s+", "")
-
+                    
                     if currentText == "0:30" and not triggered then
                         triggered = true
                         executeCandleLoop()
                     elseif currentText ~= "0:30" then
                         triggered = false
                     end
-
+                    
                     task.wait(0.1)
                 end
             end)
@@ -817,12 +842,15 @@ HalloweenTab:Button({
                     continue
                 end
 
+                -- Teleport to this candle
                 hrp.CFrame=part.CFrame+Vector3.new(0,3,0)
                 task.wait(0.2)
 
+                -- Fire once
                 Fire(prompt)
                 task.wait(0.016)
 
+                -- If Time is still 0, fire again
                 while candle.Parent and IsZero(candle) do
                     prompt=GetPrompt(candle)
                     if not prompt then break end
@@ -832,6 +860,7 @@ HalloweenTab:Button({
                 end
             end
 
+            -- Return after all candles
             if hrp and hrp.Parent then
                 hrp.CFrame=originalCFrame
             end
@@ -854,6 +883,7 @@ HalloweenTab:Button({
 
             local originalCFrame = hrp.CFrame
 
+            -- Helper to get a valid BasePart from any object type (Model, Part, etc.)
             local function GetPart(obj)
                 if obj:IsA("BasePart") then
                     return obj
@@ -864,10 +894,12 @@ HalloweenTab:Button({
                 return obj:FindFirstChildWhichIsA("BasePart", true)
             end
 
+            -- Helper to find proximity prompt inside the object or its children
             local function GetPrompt(obj)
                 return obj:FindFirstChildWhichIsA("ProximityPrompt", true)
             end
 
+            -- Helper to handle teleporting and interacting
             local function InteractWith(obj)
                 if not obj or not obj.Parent then return end
 
@@ -875,10 +907,11 @@ HalloweenTab:Button({
                 local prompt = GetPrompt(obj)
 
                 if part and prompt then
-
+                    -- Teleport slightly above the object
                     hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
                     task.wait(0.2)
 
+                    -- Fire prompt
                     pcall(function()
                         prompt.Enabled = true
                         fireproximityprompt(prompt)
@@ -887,6 +920,7 @@ HalloweenTab:Button({
                 end
             end
 
+            -- Folder list sequence
             local ingredientFolders = {
                 workspace:FindFirstChild("MainObjective") and workspace.MainObjective.Ingredients:FindFirstChild("Bats"),
                 workspace:FindFirstChild("MainObjective") and workspace.MainObjective.Ingredients:FindFirstChild("Eyes"),
@@ -894,6 +928,7 @@ HalloweenTab:Button({
                 workspace:FindFirstChild("MainObjective") and workspace.MainObjective.Ingredients:FindFirstChild("Snakes"),
             }
 
+            -- Process each folder item by item
             for _, folder in ipairs(ingredientFolders) do
                 if folder then
                     for _, ingredient in ipairs(folder:GetChildren()) do
@@ -902,11 +937,13 @@ HalloweenTab:Button({
                 end
             end
 
+            -- Final step: Cauldron interaction
             local cauldron = workspace:FindFirstChild("MainObjective") and workspace.MainObjective:FindFirstChild("Cauldron")
             if cauldron then
                 InteractWith(cauldron)
             end
 
+            -- Return to original spot
             if hrp and hrp.Parent then
                 hrp.CFrame = originalCFrame
             end
@@ -914,9 +951,10 @@ HalloweenTab:Button({
     end
 })
 
+
 local SelectedMonster = "Select"
 local BehindToggle = false
-local followTask = nil
+local followConnection = nil
 local OriginalCFrame = nil
 
 local Players = game:GetService("Players")
@@ -926,6 +964,7 @@ local LocalPlayer = Players.LocalPlayer
 local BEHIND_DISTANCE = -35
 local TARGET_Y_HEIGHT = 55
 
+-- Map monster targets to their B - FLAMES instance
 local FlamePaths = {
     ["Big Silly"] = function() return workspace.AI:FindFirstChild("Big Silly") and workspace.AI["Big Silly"]:FindFirstChild("B - FLAMES") end,
     ["Kabocha"]   = function() return workspace.AI:FindFirstChild("Kabocha") and workspace.AI.Kabocha:FindFirstChild("B - FLAMES") end,
@@ -936,34 +975,42 @@ local function startFollowing()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
 
-    if followTask then pcall(function() task.cancel(followTask) end) followTask = nil end
+    if followConnection then
+        followConnection:Disconnect()
+    end
 
-    followTask = task.spawn(function()
-        while BehindToggle do
-            if hrp then
-                local flameGetter = FlamePaths[SelectedMonster]
-                local flame = flameGetter and flameGetter()
-                if flame and flame:IsA("BasePart") then
-                    local flameCF = flame.CFrame
-                    local flamePos = flameCF.Position
-                    local flameLook = flameCF.LookVector
-                    local flatLook = Vector3.new(flameLook.X, 0, flameLook.Z)
-                    if flatLook.Magnitude > 0 then flatLook = flatLook.Unit end
-                    local targetPos = Vector3.new(
-                        flamePos.X - (flatLook.X * BEHIND_DISTANCE),
-                        TARGET_Y_HEIGHT,
-                        flamePos.Z - (flatLook.Z * BEHIND_DISTANCE)
-                    )
-                    hrp.CFrame = CFrame.lookAt(targetPos, Vector3.new(flamePos.X, TARGET_Y_HEIGHT, flamePos.Z))
-                end
-            end
-            task.wait(0.05)
+    followConnection = RunService.Heartbeat:Connect(function()
+        if not BehindToggle or not hrp then return end
+
+        local flameGetter = FlamePaths[SelectedMonster]
+        local flame = flameGetter and flameGetter()
+
+        if flame and flame:IsA("BasePart") then
+            local flameCF = flame.CFrame
+            local flamePos = flameCF.Position
+            local flameLook = flameCF.LookVector
+
+            -- Flat 2D vector for horizontal offset behind the flame
+            local flatLook = Vector3.new(flameLook.X, 0, flameLook.Z).Unit
+
+            -- X & Z are offset 35 studs behind B - FLAMES; Y is fixed strictly to 55
+            local targetPos = Vector3.new(
+                flamePos.X - (flatLook.X * BEHIND_DISTANCE),
+                TARGET_Y_HEIGHT,
+                flamePos.Z - (flatLook.Z * BEHIND_DISTANCE)
+            )
+
+            -- Face toward B - FLAMES at the same height plane
+            hrp.CFrame = CFrame.lookAt(targetPos, Vector3.new(flamePos.X, TARGET_Y_HEIGHT, flamePos.Z))
         end
     end)
 end
 
 local function stopFollowing()
-    if followTask then pcall(function() task.cancel(followTask) end) followTask = nil end
+    if followConnection then
+        followConnection:Disconnect()
+        followConnection = nil
+    end
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -984,7 +1031,7 @@ HalloweenTab:Dropdown({
 })
 
 HalloweenTab:Toggle({
-    Title = "Front Monster",
+    Title = "Behind Monster",
     Default = false,
     Callback = function(state)
         BehindToggle = state
@@ -995,7 +1042,7 @@ HalloweenTab:Toggle({
             if hrp then
                 OriginalCFrame = hrp.CFrame
             end
-
+            
             startFollowing()
         else
             stopFollowing()
