@@ -1,1 +1,1155 @@
+local success, KazeUILib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/UI-Test"))()
+end)
+local KazeUI = KazeUI or (success and KazeUILib)
 
+if not KazeUI then
+    warn("Failed to load KazeUI library!")
+    return
+end
+
+local Window = KazeUI:CreateWindow({
+    Title = "NIGHTMARE CIRCUS",
+    Author = "KAZE",
+    Version = "",
+    Size = UDim2.fromOffset(500, 370),
+    Icon = "79414074886215",
+    Theme = "https://images3.alphacoders.com/124/1244059.jpg",
+    GlowStyle = "Sequence",
+    GlowColor = true,
+    HidableTab = true,
+
+    PopupTitle = "Welcome to KAZE HUB",
+    PopupContent = "Thank You for using my script!",
+    DiscordLink = "https://discord.gg/DKGRny4DD",
+    DiscordName = "Join our server",
+    YoutubeLink = "https://www.youtube.com/@Kaze_Hub",
+    YoutubeName = "KazeHub",
+
+    OpenButton = {
+        Icon = "79414074886215",
+        Shape = "square", 
+        Hidable = false,
+        Size = UDim2.fromOffset(60, 60)
+    },
+})
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Main = Window:CreateTab({ Title = "Player", Icon = "user" })
+
+Main:Section("Client")
+
+local InstantPromptEnabled = false
+local PromptConnection
+local OriginalHoldDurations = {}
+
+local function SetInstantPrompt(prompt)
+    if not prompt:IsA("ProximityPrompt") then return end
+
+    if OriginalHoldDurations[prompt] == nil then
+        OriginalHoldDurations[prompt] = prompt.HoldDuration
+    end
+
+    if InstantPromptEnabled then
+        prompt.HoldDuration = 0
+    end
+end
+
+local function RestorePrompts()
+    for prompt, duration in pairs(OriginalHoldDurations) do
+        if prompt.Parent then
+            prompt.HoldDuration = duration
+        end
+        OriginalHoldDurations[prompt] = nil
+    end
+end
+
+Main:Toggle({
+    Title = "Instant Prompt",
+    Default = false,
+    Callback = function(state)
+        InstantPromptEnabled = state
+
+        if PromptConnection then
+            PromptConnection:Disconnect()
+            PromptConnection = nil
+        end
+
+        if state then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    SetInstantPrompt(obj)
+                end
+            end
+
+            PromptConnection = workspace.DescendantAdded:Connect(function(obj)
+                if InstantPromptEnabled and obj:IsA("ProximityPrompt") then
+                    SetInstantPrompt(obj)
+                end
+            end)
+        else
+            RestorePrompts()
+        end
+    end
+})
+
+local Lighting = game:GetService("Lighting")
+
+local FB_ENABLED = false
+local fbConnection
+local origAmbient = Lighting.Ambient
+local origOutdoorAmbient = Lighting.OutdoorAmbient
+local origBrightness = Lighting.Brightness
+local origClockTime = Lighting.ClockTime
+local origShadows = Lighting.GlobalShadows
+
+Main:Toggle({
+    Title = "FullBright",
+    Default = false,
+    Callback = function(s)
+        FB_ENABLED = s
+        if fbConnection then 
+            fbConnection:Disconnect() 
+            fbConnection = nil
+        end
+        
+        if FB_ENABLED then
+            local function applyBright()
+                local a = Color3.fromRGB(178, 178, 178)
+                if Lighting.Ambient ~= a then Lighting.Ambient = a end
+                if Lighting.OutdoorAmbient ~= a then Lighting.OutdoorAmbient = a end
+                if Lighting.Brightness ~= 2 then Lighting.Brightness = 2 end
+                if Lighting.ClockTime ~= 14 then Lighting.ClockTime = 14 end
+                if Lighting.GlobalShadows ~= false then Lighting.GlobalShadows = false end
+            end
+            
+            applyBright()
+            fbConnection = Lighting.Changed:Connect(applyBright)
+        else
+            Lighting.Ambient = origAmbient
+            Lighting.OutdoorAmbient = origOutdoorAmbient
+            Lighting.Brightness = origBrightness
+            Lighting.ClockTime = origClockTime
+            Lighting.GlobalShadows = origShadows
+        end
+    end
+})
+
+local CachedCharacter = LocalPlayer.Character
+local CachedHumanoid = CachedCharacter and CachedCharacter:FindFirstChildOfClass("Humanoid")
+local CachedHRP = CachedCharacter and CachedCharacter:FindFirstChild("HumanoidRootPart")
+local CachedNoclipParts = {}
+
+local function rebuildNoclipParts(char)
+    CachedNoclipParts = {}
+    if not char then return end
+    for _, p in ipairs(char:GetChildren()) do
+        if p:IsA("BasePart") then
+            CachedNoclipParts[#CachedNoclipParts + 1] = p
+        elseif p:IsA("Accessory") then
+            local h = p:FindFirstChild("Handle")
+            if h and h:IsA("BasePart") then
+                CachedNoclipParts[#CachedNoclipParts + 1] = h
+            end
+        end
+    end
+end
+rebuildNoclipParts(CachedCharacter)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    CachedCharacter = char
+    CachedHumanoid = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
+    CachedHRP = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 5)
+    task.defer(function()
+        task.wait(0.15)
+        rebuildNoclipParts(char)
+    end)
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    CachedCharacter = nil
+    CachedHumanoid = nil
+    CachedHRP = nil
+    CachedNoclipParts = {}
+end)
+
+local NoclipEnabled = false
+local noclipConnection
+
+Main:Toggle({
+    Title = "Noclip",
+    Default = false,
+    Callback = function(s)
+        NoclipEnabled = s
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        
+        if NoclipEnabled then
+            if #CachedNoclipParts == 0 and CachedCharacter then
+                rebuildNoclipParts(CachedCharacter)
+            end
+            noclipConnection = RunService.Stepped:Connect(function()
+                for i = 1, #CachedNoclipParts do
+                    local part = CachedNoclipParts[i]
+                    if part and part.Parent and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local tpwalking = nil
+local tpwalkStack = 0
+local TPSpeed = 1
+
+Main:Slider({
+    Title = "TP Walk Speed",
+    Min = 1,
+    Max = 20,
+    Default = 1,
+    Callback = function(v)
+        TPSpeed = v
+    end
+})
+
+Main:Toggle({
+    Title = "Enable TP Walk",
+    Default = false,
+    Callback = function(s)
+        if tpwalking then
+            tpwalking:Disconnect()
+            tpwalking = nil
+        end
+        
+        if s then
+            tpwalking = RunService.Heartbeat:Connect(function(delta)
+                local character = LocalPlayer.Character
+                local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+                
+                if not (character and humanoid and humanoid.Parent) then
+                    if tpwalking then 
+                        tpwalking:Disconnect() 
+                        tpwalking = nil 
+                    end
+                    return
+                end
+
+                if humanoid.MoveDirection.Magnitude > 0 then
+                    character:TranslateBy(humanoid.MoveDirection * (TPSpeed + tpwalkStack) * delta * 10)
+                end
+            end)
+        else
+            tpwalkStack = 0
+        end
+    end
+})
+
+local WalkSpeedEnabled = false
+local WalkSpeedValue = 16
+local OriginalWalkSpeed = 16
+local Connection = nil
+
+local function GetHumanoid()
+    local Char = LocalPlayer.Character
+    if not Char then return nil end
+    return Char:FindFirstChildOfClass("Humanoid")
+end
+
+local function ApplyWalkSpeed()
+    local Hum = GetHumanoid()
+    if Hum then
+        Hum.WalkSpeed = WalkSpeedValue
+    end
+end
+
+local function StopWalkSpeed()
+    local Hum = GetHumanoid()
+    if Hum then
+        Hum.WalkSpeed = OriginalWalkSpeed
+    end
+    if Connection then
+        Connection:Disconnect()
+        Connection = nil
+    end
+end
+
+local function StartWalkSpeed()
+    local Hum = GetHumanoid()
+    if Hum then
+        OriginalWalkSpeed = Hum.WalkSpeed
+    end
+    
+    ApplyWalkSpeed()
+    
+    if Connection then
+        Connection:Disconnect()
+    end
+    
+    Connection = RunService.Heartbeat:Connect(function()
+        if WalkSpeedEnabled then
+            ApplyWalkSpeed()
+        end
+    end)
+end
+
+Main:Slider({
+    Title = "WalkSpeed Value",
+    Min = 16,
+    Max = 1000,
+    Default = 16,
+    Callback = function(v)
+        WalkSpeedValue = math.clamp(v, 16, 1000)
+        if WalkSpeedEnabled then
+            ApplyWalkSpeed()
+        end
+    end
+})
+
+Main:Toggle({
+    Title = "WalkSpeed",
+    Default = false,
+    Callback = function(v)
+        WalkSpeedEnabled = v
+        if WalkSpeedEnabled then
+            StartWalkSpeed()
+        else
+            StopWalkSpeed()
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if WalkSpeedEnabled then
+        task.wait(1)
+        local Hum = GetHumanoid()
+        if Hum then
+            OriginalWalkSpeed = Hum.WalkSpeed
+        end
+        ApplyWalkSpeed()
+    end
+end)
+
+_G.KAZE_WalkSpeed = {
+    Enable = function()
+        WalkSpeedEnabled = true
+        StartWalkSpeed()
+    end,
+    Disable = function()
+        WalkSpeedEnabled = false
+        StopWalkSpeed()
+    end,
+    SetValue = function(Value)
+        WalkSpeedValue = math.clamp(Value, 16, 1000)
+        if WalkSpeedEnabled then
+            ApplyWalkSpeed()
+        end
+    end,
+    IsEnabled = function() return WalkSpeedEnabled end,
+    GetValue = function() return WalkSpeedValue end
+}
+
+local TargetFlySpeed = 16
+local FLY_ENABLED = false
+local flyConnection
+
+Main:Slider({
+    Title = "Fly Speed",
+    Min = 16,
+    Max = 100,
+    Default = 16,
+    Callback = function(val)
+        TargetFlySpeed = val
+    end
+})
+
+Main:Toggle({
+    Title = "Enable Fly",
+    Default = false,
+    Callback = function(state)
+        FLY_ENABLED = state
+        
+        local function stopFly()
+            if flyConnection then 
+                flyConnection:Disconnect() 
+                flyConnection = nil 
+            end
+            
+            local character = LocalPlayer.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid then
+                humanoid.PlatformStand = false
+            end
+            if hrp then
+                hrp.Anchored = false
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
+        end
+        
+        stopFly()
+        
+        if FLY_ENABLED then
+            local camera = workspace.CurrentCamera
+            
+            flyConnection = RunService.RenderStepped:Connect(function(dt)
+                local hrp = CachedHRP
+                local humanoid = CachedHumanoid
+                if not hrp or not hrp.Parent then
+                    local character = LocalPlayer.Character
+                    hrp = character and character:FindFirstChild("HumanoidRootPart")
+                    humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                    CachedHRP = hrp
+                    CachedHumanoid = humanoid
+                end
+                if hrp and humanoid then
+                    local moveDir = humanoid.MoveDirection
+                    
+                    if moveDir.Magnitude > 0 then
+                        hrp.Anchored = false
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        
+                        local cameraCF = camera.CFrame
+                        local relativeVector = cameraCF:VectorToObjectSpace(moveDir)
+                        local flyDirection = (cameraCF.RightVector * relativeVector.X) + (cameraCF.LookVector * -relativeVector.Z)
+                        
+                        if flyDirection.Magnitude > 0 then
+                            flyDirection = flyDirection.Unit
+                        end
+                        
+                        hrp.CFrame = CFrame.lookAlong(hrp.Position, flyDirection) + (flyDirection * (TargetFlySpeed * dt))
+                    else
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                        hrp.AssemblyAngularVelocity = Vector3.zero
+                        hrp.Anchored = true
+                    end
+                end
+            end)
+        end
+    end
+})
+
+local GameTab = Window:CreateTab({
+    Title = "Game",
+    Icon = "gamepad-2"
+})
+
+GameTab:Button({
+    Title = "Low GFX",
+    Callback = function()
+        local DISABLE_SHADOWS = true
+        local DISABLE_POST_PROCESSING = true
+        local DISABLE_PARTICLES = true
+        local DISABLE_TEXTURES = true
+
+        pcall(function()
+            if DISABLE_SHADOWS then
+                Lighting.GlobalShadows = false
+                Lighting.ShadowSoftness = 0
+            end
+
+            if DISABLE_POST_PROCESSING then
+                for _, child in ipairs(Lighting:GetChildren()) do
+                    if child:IsA("PostEffect") or child:IsA("Atmosphere") or child:IsA("Sky") then
+                        child:Destroy()
+                    end
+                end
+            end
+
+            if Terrain then
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveTransparency = 1
+                Terrain.WaterReflectance = 0
+                pcall(function()
+                    sethiddenproperty(Terrain, "Decoration", false)
+                end)
+            end
+
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if DISABLE_PARTICLES and (obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles")) then
+                    obj.Enabled = false
+                elseif DISABLE_TEXTURES and (obj:IsA("Decal") or obj:IsA("Texture")) then
+                    obj.Transparency = 1
+                elseif obj:IsA("BasePart") then
+                    obj.CastShadow = false
+                    obj.Material = Enum.Material.SmoothPlastic
+                end
+            end
+        end)
+
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Performance Booster",
+                Text = "Low GFX Applied Successfully!",
+                Duration = 3
+            })
+        end)
+    end
+})
+
+local Ronnie = Window:CreateTab({
+    Title = "Ronnie's Games",
+    Icon = "play"
+})
+
+local ronnieActive = false
+
+Ronnie:Toggle({
+    Title = "ESPRonnie",
+    Default = false,
+    Callback = function(state)
+        ronnieActive = state
+        if not ronnieActive then
+            pcall(function()
+                local ronnie = workspace.Section1.Monster.Ronnie
+                if ronnie and ronnie:FindFirstChild("KazeRonnieESP") then
+                    ronnie.KazeRonnieESP:Destroy()
+                end
+            end)
+        else
+            task.spawn(function()
+                while ronnieActive do
+                    pcall(function()
+                        local ronnie = workspace.Section1.Monster.Ronnie
+                        if ronnie and not ronnie:FindFirstChild("KazeRonnieESP") then
+                            local hl = Instance.new("Highlight")
+                            hl.Name = "KazeRonnieESP"
+                            hl.FillColor = Color3.fromRGB(255, 0, 0)
+                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            hl.FillTransparency = 0.4
+                            hl.OutlineTransparency = 0
+                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            hl.Parent = ronnie
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+Ronnie:Button({
+    Title = "Start",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local player = game:GetService("Players").LocalPlayer
+                local char = player.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local originalPos = root.CFrame
+                    root.CFrame = CFrame.new(-119.516685, 41.0885391, 180.59729, 0.999178648, 0.040521495, 9.03382897e-07, -9.03382897e-07, 4.4465065e-05, -1, -0.040521495, 0.999178648, 4.4465065e-05)
+                    task.wait(0.1)
+                    root.CFrame = originalPos
+                end
+            end)
+        end)
+    end
+})
+
+Ronnie:Section("MiniGames")
+
+Ronnie:Button({
+    Title = "Pop Balloon",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                local throws = {
+                    {0.92983092006390555, 0.89542727483312756},
+                    {0.47093705174143813, 0.80153832697161831},
+                    {0.036195629164746154, 0.74118300407687365},
+                    {-0.49997853250524144, 0.92895904767845361},
+                    {-0.85742993934714073, 0.86190105835211672},
+                    {-0.88158521777057908, 0.063844312016687901},
+                    {-0.43718631318775103, 0.050425747557683961},
+                    {-0.0024464656540977578, 0.097370231554315942},
+                    {0.52407672269342787, 0.14431387001724777},
+                    {0.90085119312209305, 0.13090282980158738},
+                    {0.95398411201377131, -0.82810749216782142},
+                    {0.45644895597730872, -0.72080072975517329},
+                    {0.026543031897521139, -0.74763104407419312},
+                    {0.026543031897521139, -0.74763104407419312},
+                    {-0.4178620035126015, -0.79457443089019031},
+                    {-0.4178620035126015, -0.79457443089019031},
+                    {-0.92989102209431795, -0.85493072010916382}
+                }
+
+                for _, coords in ipairs(throws) do
+                    Event:FireServer("Section1/DartsThrow", coords[1], coords[2])
+                    task.wait(0.5)
+                end
+            end)
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Basketball",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                
+                Event:FireServer("Section1/BasketballHold")
+                task.wait(1.2)
+                Event:FireServer("Section1/BasketballRelease", 1.2020681140056695)
+            end)
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Whack a Clown",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Players = game:GetService("Players")
+                local ReplicatedStorage = game:GetService("ReplicatedStorage")
+                local LocalPlayer = Players.LocalPlayer
+                local Event = ReplicatedStorage.modules.Packet.Reliable
+                local clownsFolder = workspace.Section1.Games.WhackAClown.Clowns
+
+                local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+                local gui4 = playerGui and playerGui:WaitForChild("Gui4", 5)
+                local targetFrame = gui4 and gui4:GetChildren()[2]
+                local titleLabel = targetFrame and targetFrame:FindFirstChildOfClass("TextLabel")
+
+                while true do
+                    if titleLabel and titleLabel.Visible and titleLabel.ContentText == "Whack a Clown" then
+                        for _, clown in ipairs(clownsFolder:GetChildren()) do
+                            if clown:FindFirstChildOfClass("Highlight") then
+                                Event:FireServer("Section1/Whack", clown)
+                            end
+                        end
+                        task.wait(0.05)
+                    else
+                        task.wait(0.5)
+                    end
+                end
+            end)
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Ring Toss",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                local throws = {
+                    {0.44180347985921808, 0.61037859879434109},
+                    {0.68545258700464173, 0.52417304112829943},
+                    {0.40292765811018749, 0.93975440006364463},
+                    {0.76547774451103279, 0.16494464975866402},
+                    {-0.30585762751030754, 0.33050793477080082},
+                    {-0.82212904535440068, 0.12518643401563168},
+                    {-0.67426597668684263, 0.29201958074488421}
+                }
+
+                for _, coords in ipairs(throws) do
+                    Event:FireServer("Section1/RingThrow", coords[1], coords[2])
+                    task.wait(1)
+                end
+            end)
+        end)
+    end
+})
+
+local highStrikerActive = false
+
+Ronnie:Toggle({
+    Title = "High Striker",
+    Default = false,
+    Callback = function(Value)
+        highStrikerActive = Value
+
+        if highStrikerActive then
+            task.spawn(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                while highStrikerActive do
+                    pcall(function()
+                        Event:FireServer("Section1/HighStrikerClick")
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Ronnie:Button({
+    Title = "Mini Golf",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local workspace = game:GetService("Workspace")
+                local golfBall = workspace.Section1.Games.MiniGolf:FindFirstChild("GolfBall")
+                local hole = workspace.Section1.Games.MiniGolf:FindFirstChild("Hole")
+
+                if golfBall and hole then
+                    if golfBall:IsA("BasePart") then
+                        golfBall.CFrame = hole.CFrame
+                    elseif golfBall:IsA("Model") and golfBall.PrimaryPart then
+                        golfBall:SetPrimaryPartCFrame(hole.CFrame)
+                    end
+                end
+            end)
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Dunk Booth",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                Event:FireServer("Section1/DunkThrow", 0.27402551854143786, -0.0085155691596274265)
+            end)
+        end)
+    end
+})
+
+local Dimitra = Window:CreateTab({
+    Title = "Dimitra's Games",
+    Icon = "play"
+})
+
+local dimitraActive = false
+
+Dimitra:Toggle({
+    Title = "ESP Dimitra",
+    Default = false,
+    Callback = function(state)
+        dimitraActive = state
+        if not dimitraActive then
+            pcall(function()
+                local dimitra = workspace:FindFirstChild("Section2") and workspace.Section2:FindFirstChild("Monster") and workspace.Section2.Monster:FindFirstChild("Dimitra")
+                if dimitra and dimitra:FindFirstChild("KazeDimitraESP") then
+                    dimitra.KazeDimitraESP:Destroy()
+                end
+            end)
+        else
+            task.spawn(function()
+                while dimitraActive do
+                    pcall(function()
+                        local dimitra = workspace:FindFirstChild("Section2") and workspace.Section2:FindFirstChild("Monster") and workspace.Section2.Monster:FindFirstChild("Dimitra")
+                        if dimitra and not dimitra:FindFirstChild("KazeDimitraESP") then
+                            local hl = Instance.new("Highlight")
+                            hl.Name = "KazeDimitraESP"
+                            hl.FillColor = Color3.fromRGB(255, 0, 0)
+                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                            hl.FillTransparency = 0.4
+                            hl.OutlineTransparency = 0
+                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            hl.Parent = dimitr
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+Dimitra:Section("MiniGames")
+
+Dimitra:Button({
+    Title = "Star Relic",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                for i = 1, 5 do
+                    Event:FireServer("Section2/StarPuzzleProgress", i)
+                    task.wait(0.1)
+                end
+                Event:FireServer("Section2/StarPuzzleComplete")
+            end)
+        end)
+    end
+})
+
+Dimitra:Button({
+    Title = "Moon Relic",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                for i = 1, 8 do
+                    Event:FireServer("Section2/MoonPuzzleProgress", i)
+                    task.wait(0.1)
+                end
+                Event:FireServer("Section2/MoonPuzzleComplete")
+            end)
+        end)
+    end
+})
+
+Dimitra:Button({
+    Title = "Fate Relic",
+    Callback = function()
+        task.spawn(function()
+            pcall(function()
+                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+                for i = 1, 5 do
+                    Event:FireServer("Section2/TarotPuzzleProgress", i)
+                    task.wait(0.1)
+                end
+                Event:FireServer("Section2/TarotPuzzleComplete")
+            end)
+        end)
+    end
+})
+
+local eyeRelicActive = false
+
+Dimitra:Toggle({
+    Title = "Eye Relic",
+    Default = false,
+    Callback = function(Value)
+        eyeRelicActive = Value
+
+        if eyeRelicActive then
+            task.spawn(function()
+                local Workspace = game:GetService("Workspace")
+                local player = game:GetService("Players").LocalPlayer
+                local lastPuzzleSignature = ""
+
+                while eyeRelicActive do
+                    pcall(function()
+                        local puzzle = Workspace:FindFirstChild("Section2") 
+                            and Workspace.Section2:FindFirstChild("MainObjective") 
+                            and Workspace.Section2.MainObjective:FindFirstChild("Puzzle2")
+
+                        if puzzle then
+                            local mirrorsFolder = puzzle:FindFirstChild("Mirrors")
+                            local statuesFolder = puzzle:FindFirstChild("EyeStatues")
+                            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+                            if mirrorsFolder and statuesFolder and hrp then
+                                local detectedMirrors = {} 
+                                local recordedMirrors = {}
+                                local signatureString = ""
+
+                                local collecting = true
+                                local lastActivationTime = tick()
+
+                                while collecting and eyeRelicActive do
+                                    local foundNewThisCycle = false
+
+                                    for i = 1, 4 do
+                                        if not recordedMirrors[i] then
+                                            local mirror = mirrorsFolder:FindFirstChild("Mirror" .. i)
+                                            local eye = mirror and mirror:FindFirstChild("Eye")
+
+                                            if eye then
+                                                local isVisible = false
+                                                for _, part in ipairs(eye:GetChildren()) do
+                                                    if part:IsA("BasePart") and part.Transparency == 0 then
+                                                        isVisible = true
+                                                        break
+                                                    end
+                                                end
+
+                                                if isVisible then
+                                                    table.insert(detectedMirrors, {index = i, time = tick()})
+                                                    recordedMirrors[i] = true
+                                                    signatureString = signatureString .. i
+                                                    foundNewThisCycle = true
+                                                    lastActivationTime = tick()
+                                                end
+                                            end
+                                        end
+                                    end
+
+                                    if not foundNewThisCycle then
+                                        if tick() - lastActivationTime > 1.5 and #detectedMirrors > 0 then
+                                            collecting = false
+                                        end
+                                    end
+
+                                    task.wait(0.02)
+                                end
+
+                                table.sort(detectedMirrors, function(a, b)
+                                    return a.time < b.time
+                                end)
+
+                                local sequence = {}
+                                local finalSignature = ""
+                                for _, data in ipairs(detectedMirrors) do
+                                    table.insert(sequence, data.index)
+                                    finalSignature = finalSignature .. data.index
+                                end
+
+                                if #sequence > 0 and finalSignature ~= lastPuzzleSignature then
+                                    lastPuzzleSignature = finalSignature
+
+                                    for _, idx in ipairs(sequence) do
+                                        if not eyeRelicActive then break end
+
+                                        local statue = statuesFolder:FindFirstChild("Eye" .. idx)
+                                        local targetPart = statue and (statue.PrimaryPart or statue:FindFirstChildWhichIsA("BasePart"))
+                                        local prompt = statue and statue:FindFirstChild("Prompt") and statue.Prompt:FindFirstChild("ProximityPrompt")
+
+                                        if targetPart and prompt then
+                                            hrp.CFrame = targetPart.CFrame * CFrame.new(0, 0, -3)
+                                            task.wait(0.3)
+
+                                            fireproximityprompt(prompt)
+                                            
+                                            task.wait(0.2)
+                                        end
+                                    end
+
+                                    task.wait(1.5)
+                                    lastPuzzleSignature = ""
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end
+})
+
+local eyeRelicActive = false
+
+Dimitra:Toggle({
+    Title = "Eye Relic [The Hollow]",
+    Default = false,
+    Callback = function(Value)
+        eyeRelicActive = Value
+
+        if eyeRelicActive then
+            task.spawn(function()
+                local Workspace = game:GetService("Workspace")
+                local player = game:GetService("Players").LocalPlayer
+                local lastPuzzleSignature = ""
+
+                -- Opposite Mapping Table
+                local mirrorToEyeMap = {
+                    [4] = 1, -- Mirror4 -> Eye1
+                    [3] = 2, -- Mirror3 -> Eye2
+                    [2] = 3, -- Mirror2 -> Eye3
+                    [1] = 4  -- Mirror1 -> Eye4
+                }
+
+                while eyeRelicActive do
+                    pcall(function()
+                        local puzzle = Workspace:FindFirstChild("Section2") 
+                            and Workspace.Section2:FindFirstChild("MainObjective") 
+                            and Workspace.Section2.MainObjective:FindFirstChild("Puzzle2")
+
+                        if puzzle then
+                            local mirrorsFolder = puzzle:FindFirstChild("Mirrors")
+                            local statuesFolder = puzzle:FindFirstChild("EyeStatues")
+                            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+                            if mirrorsFolder and statuesFolder and hrp then
+                                local detectedMirrors = {} 
+                                local recordedMirrors = {}
+                                local signatureString = ""
+
+                                local collecting = true
+                                local lastActivationTime = tick()
+
+                                while collecting and eyeRelicActive do
+                                    local foundNewThisCycle = false
+
+                                    for i = 1, 4 do
+                                        if not recordedMirrors[i] then
+                                            local mirror = mirrorsFolder:FindFirstChild("Mirror" .. i)
+                                            local eye = mirror and mirror:FindFirstChild("Eye")
+
+                                            if eye then
+                                                local isVisible = false
+                                                for _, part in ipairs(eye:GetChildren()) do
+                                                    if part:IsA("BasePart") and part.Transparency == 0 then
+                                                        isVisible = true
+                                                        break
+                                                    end
+                                                end
+
+                                                if isVisible then
+                                                    table.insert(detectedMirrors, {index = i, time = tick()})
+                                                    recordedMirrors[i] = true
+                                                    signatureString = signatureString .. i
+                                                    foundNewThisCycle = true
+                                                    lastActivationTime = tick()
+                                                end
+                                            end
+                                        end
+                                    end
+
+                                    if not foundNewThisCycle then
+                                        if tick() - lastActivationTime > 1.5 and #detectedMirrors > 0 then
+                                            collecting = false
+                                        end
+                                    end
+
+                                    task.wait(0.02)
+                                end
+
+                                table.sort(detectedMirrors, function(a, b)
+                                    return a.time < b.time
+                                end)
+
+                                local sequence = {}
+                                local finalSignature = ""
+                                for _, data in ipairs(detectedMirrors) do
+                                    -- I-convert ang mirror index papunta sa kabaligtaran nitong eye index
+                                    local mappedEyeIndex = mirrorToEyeMap[data.index] or data.index
+                                    table.insert(sequence, mappedEyeIndex)
+                                    finalSignature = finalSignature .. mappedEyeIndex
+                                end
+
+                                if #sequence > 0 and finalSignature ~= lastPuzzleSignature then
+                                    lastPuzzleSignature = finalSignature
+
+                                    for _, mappedIdx in ipairs(sequence) do
+                                        if not eyeRelicActive then break end
+
+                                        local statue = statuesFolder:FindFirstChild("Eye" .. mappedIdx)
+                                        local targetPart = statue and (statue.PrimaryPart or statue:FindFirstChildWhichIsA("BasePart"))
+                                        local prompt = statue and statue:FindFirstChild("Prompt") and statue.Prompt:FindFirstChild("ProximityPrompt")
+
+                                        if targetPart and prompt then
+                                            hrp.CFrame = targetPart.CFrame * CFrame.new(0, 0, -3)
+                                            task.wait(0.3)
+
+                                            fireproximityprompt(prompt)
+                                            
+                                            task.wait(0.2)
+                                        end
+                                    end
+
+                                    task.wait(1.5)
+                                    lastPuzzleSignature = ""
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end
+})
+
+Dimitra:Section("Final Boss")
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LP = Players.LocalPlayer
+local AutoBossEnabled = false
+local AutoBossConnection
+local OriginalHitboxSize
+local CachedHitbox
+local OriginalPlayerCFrame -- Dito natin ise-save ang original position mo
+
+Dimitra:Toggle({
+    Title = "Auto Boss",
+    Default = false,
+    Callback = function(state)
+        AutoBossEnabled = state
+
+        if AutoBossConnection then
+            AutoBossConnection:Disconnect()
+            AutoBossConnection = nil
+        end
+
+        local section = workspace:FindFirstChild("Section3")
+        local boss = section and section:FindFirstChild("DimitraBOSS")
+        local hitbox = boss and boss:FindFirstChild("PlayerHitbox")
+
+        if state then
+            -- I-save ang kasalukuyang posisyon mo bago mag-teleport sa boss
+            local character = LP.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if root then
+                OriginalPlayerCFrame = root.CFrame
+            end
+
+            if hitbox and hitbox:IsA("BasePart") then
+                CachedHitbox = hitbox
+                OriginalHitboxSize = hitbox.Size
+                hitbox.Size = Vector3.new(50, 50, 50)
+            end
+
+            AutoBossConnection = RunService.Heartbeat:Connect(function()
+                if not AutoBossEnabled then return end
+
+                local char = LP.Character
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if not (boss and boss.Parent and humanoid and hrp and humanoid.Health > 0) then
+                    return
+                end
+
+                local axe = char:FindFirstChild("MagicAxe")
+                    or (LP:FindFirstChild("Backpack") and LP.Backpack:FindFirstChild("MagicAxe"))
+
+                if axe and axe.Parent ~= char then
+                    humanoid:EquipTool(axe)
+                end
+
+                local bossPart = boss:FindFirstChild("HumanoidRootPart")
+                    or boss.PrimaryPart
+                    or boss:FindFirstChildWhichIsA("BasePart")
+
+                if not bossPart then return end
+
+                local targetPosition = bossPart.Position - Vector3.new(0, 15, 0)
+                hrp.CFrame = CFrame.lookAt(targetPosition, bossPart.Position)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+
+                -- Damage Hack Spam
+                local modules = ReplicatedStorage:FindFirstChild("modules")
+                local reliable = modules and modules:FindFirstChild("Packet") and modules.Packet:FindFirstChild("Reliable")
+                
+                if reliable then
+                    pcall(function()
+                        reliable:FireServer("MagicAxe/SwingHit")
+                    end)
+                end
+            end)
+        else
+            -- Ibalik ang hitbox sa dati
+            if CachedHitbox and CachedHitbox.Parent and OriginalHitboxSize then
+                CachedHitbox.Size = OriginalHitboxSize
+            end
+
+            CachedHitbox = nil
+            OriginalHitboxSize = nil
+
+            -- Ibalik ang player sa original position kung saan mo ito ni-on
+            local char = LP.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp and OriginalPlayerCFrame then
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = OriginalPlayerCFrame
+            end
+            OriginalPlayerCFrame = nil
+        end
+    end
+})
