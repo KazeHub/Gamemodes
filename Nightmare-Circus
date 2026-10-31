@@ -1,5 +1,5 @@
 local success, KazeUILib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/UI-Test"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/testproject"))()
 end)
 local KazeUI = KazeUI or (success and KazeUILib)
 
@@ -12,13 +12,14 @@ local Window = KazeUI:CreateWindow({
     Title = "NIGHTMARE CIRCUS",
     Author = "KAZE",
     Version = "",
-    Size = UDim2.fromOffset(500, 370),
+    Size = UDim2.fromOffset(700, 400),
     Icon = "79414074886215",
     Theme = "https://images3.alphacoders.com/124/1244059.jpg",
     GlowStyle = "Sequence",
     GlowColor = true,
     HidableTab = true,
-
+    PerformanceMode = true,
+    
     PopupTitle = "Welcome to KAZE HUB",
     PopupContent = "Thank You for using my script!",
     DiscordLink = "https://discord.gg/DKGRny4DD",
@@ -559,165 +560,502 @@ Ronnie:Button({
 
 Ronnie:Section("MiniGames")
 
-Ronnie:Button({
-    Title = "Pop Balloon",
-    Callback = function()
-        task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                local throws = {
-                    {0.92983092006390555, 0.89542727483312756},
-                    {0.47093705174143813, 0.80153832697161831},
-                    {0.036195629164746154, 0.74118300407687365},
-                    {-0.49997853250524144, 0.92895904767845361},
-                    {-0.85742993934714073, 0.86190105835211672},
-                    {-0.88158521777057908, 0.063844312016687901},
-                    {-0.43718631318775103, 0.050425747557683961},
-                    {-0.0024464656540977578, 0.097370231554315942},
-                    {0.52407672269342787, 0.14431387001724777},
-                    {0.90085119312209305, 0.13090282980158738},
-                    {0.95398411201377131, -0.82810749216782142},
-                    {0.45644895597730872, -0.72080072975517329},
-                    {0.026543031897521139, -0.74763104407419312},
-                    {0.026543031897521139, -0.74763104407419312},
-                    {-0.4178620035126015, -0.79457443089019031},
-                    {-0.4178620035126015, -0.79457443089019031},
-                    {-0.92989102209431795, -0.85493072010916382}
-                }
-
-                for _, coords in ipairs(throws) do
-                    Event:FireServer("Section1/DartsThrow", coords[1], coords[2])
-                    task.wait(0.5)
-                end
-            end)
-        end)
-    end
-})
+local _w = game:GetService("Workspace")
+local _rs = game:GetService("ReplicatedStorage")
+local _cam = _w.CurrentCamera
+local _l = game:GetService("Players").LocalPlayer
 
 Ronnie:Button({
-    Title = "Basketball",
+    Title = "Auto Ring Toss",
     Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
+            local targetPos = Vector3.new(-317, 15, 144)
+            local safePos = Vector3.new(-136, 15, 248)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(targetPos)
+            task.wait(0.5)
+
+            local ringToss = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games") and _w.Section1.Games:FindFirstChild("RingToss")
+            local ring = ringToss and ringToss:FindFirstChild("ring")
+            local prompt = ring and ring:FindFirstChildWhichIsA("ProximityPrompt", true)
+            
+            if ring and prompt then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
                 
-                Event:FireServer("Section1/BasketballHold")
-                task.wait(1.2)
-                Event:FireServer("Section1/BasketballRelease", 1.2020681140056695)
-            end)
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, ring.Position)
+                
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(ring.Position)
+                task.wait(0.3)
+                
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+                
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5) 
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            
+            local throws = {
+                {-0.72057506723631803, 0.10509947484189813},
+                {-0.45505300427259399, 0.073720243844118974},
+                {0.018066198514086196, 0.063910384408452287},
+                {0.36272513995324229, 0.16427150334824214},
+                {0.77721826835950081, 0.11494349349628795},
+                {-0.76166853890377539, 0.2715261178937825}
+            }
+
+            for i, coords in ipairs(throws) do
+                pcall(function()
+                    Event:FireServer("Section1/RingThrow", coords[1], coords[2])
+                end)
+                task.wait(1)
+            end
         end)
     end
 })
 
 Ronnie:Button({
-    Title = "Whack a Clown",
+    Title = "Auto Mini Golf",
     Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Players = game:GetService("Players")
-                local ReplicatedStorage = game:GetService("ReplicatedStorage")
-                local LocalPlayer = Players.LocalPlayer
-                local Event = ReplicatedStorage.modules.Packet.Reliable
-                local clownsFolder = workspace.Section1.Games.WhackAClown.Clowns
+            local safePos = Vector3.new(-136, 15, 248)
+            
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(20, 17, 124)
+            task.wait(0.5)
 
-                local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-                local gui4 = playerGui and playerGui:WaitForChild("Gui4", 5)
-                local targetFrame = gui4 and gui4:GetChildren()[2]
-                local titleLabel = targetFrame and targetFrame:FindFirstChildOfClass("TextLabel")
+            local miniGolf = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games") and _w.Section1.Games:FindFirstChild("MiniGolf")
+            local proxPart = miniGolf and miniGolf:FindFirstChild("ProxPart")
+            local prompt = proxPart and proxPart:FindFirstChildWhichIsA("ProximityPrompt", true)
 
-                while true do
-                    if titleLabel and titleLabel.Visible and titleLabel.ContentText == "Whack a Clown" then
-                        for _, clown in ipairs(clownsFolder:GetChildren()) do
-                            if clown:FindFirstChildOfClass("Highlight") then
-                                Event:FireServer("Section1/Whack", clown)
-                            end
-                        end
-                        task.wait(0.05)
-                    else
-                        task.wait(0.5)
+            if prompt and proxPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+                
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, proxPart.Position)
+                
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(proxPart.Position)
+                task.wait(0.3)
+                
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+                
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local targetPos = Vector3.new(22.928955078125, 14.93798828125, 116.233642578125)
+
+            for i = 1, 5 do
+                task.wait(2)
+                local golfBall = miniGolf and miniGolf:FindFirstChild("GolfBall")
+                local hole = miniGolf and miniGolf:FindFirstChild("Hole")
+                
+                if golfBall and hole and golfBall:IsA("BasePart") then
+                    if (golfBall.Position - targetPos).Magnitude <= 15 then
+                        golfBall.AssemblyLinearVelocity = Vector3.zero
+                        golfBall.AssemblyAngularVelocity = Vector3.zero
+                        golfBall.CFrame = hole.CFrame
                     end
                 end
-            end)
+            end
         end)
     end
 })
 
 Ronnie:Button({
-    Title = "Ring Toss",
+    Title = "Auto Basketball",
     Callback = function()
-        task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                local throws = {
-                    {0.44180347985921808, 0.61037859879434109},
-                    {0.68545258700464173, 0.52417304112829943},
-                    {0.40292765811018749, 0.93975440006364463},
-                    {0.76547774451103279, 0.16494464975866402},
-                    {-0.30585762751030754, 0.33050793477080082},
-                    {-0.82212904535440068, 0.12518643401563168},
-                    {-0.67426597668684263, 0.29201958074488421}
-                }
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-                for _, coords in ipairs(throws) do
-                    Event:FireServer("Section1/RingThrow", coords[1], coords[2])
-                    task.wait(1)
-                end
-            end)
+        task.spawn(function()
+            local safePos = Vector3.new(-136, 15, 248)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(55, 37, -78)
+            task.wait(0.5)
+
+            local basketball = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games") and _w.Section1.Games:FindFirstChild("Basketball")
+            local promptPart = basketball and basketball:FindFirstChild("PromptPart")
+            local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and promptPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, promptPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(promptPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+
+            for i = 1, 7 do
+                pcall(function()
+                    Event:FireServer("Section1/BasketballHold")
+                end)
+                task.wait(1.2)
+                pcall(function()
+                    Event:FireServer("Section1/BasketballRelease", 1.207594269013498)
+                end)
+                task.wait(3)
+            end
         end)
     end
 })
 
-local highStrikerActive = false
+Ronnie:Button({
+    Title = "Auto High Striker",
+    Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-Ronnie:Toggle({
-    Title = "High Striker",
-    Default = false,
-    Callback = function(Value)
-        highStrikerActive = Value
+        task.spawn(function()
+            local safePos = Vector3.new(-136, 15, 248)
 
-        if highStrikerActive then
-            task.spawn(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                while highStrikerActive do
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(-32, 32, 39)
+            task.wait(0.5)
+
+            local games = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games")
+            local highStriker = games and games:FindFirstChild("High Striker")
+            local proxPart = highStriker and highStriker:FindFirstChild("ProxPart")
+            local prompt = proxPart and proxPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and proxPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, proxPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(proxPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+
+            for i = 1, 5 do
+                for j = 1, 50 do
                     pcall(function()
                         Event:FireServer("Section1/HighStrikerClick")
                     end)
-                    task.wait(0.1)
+                    task.wait(0.016)
                 end
-            end)
-        end
-    end
-})
-
-Ronnie:Button({
-    Title = "Mini Golf",
-    Callback = function()
-        task.spawn(function()
-            pcall(function()
-                local workspace = game:GetService("Workspace")
-                local golfBall = workspace.Section1.Games.MiniGolf:FindFirstChild("GolfBall")
-                local hole = workspace.Section1.Games.MiniGolf:FindFirstChild("Hole")
-
-                if golfBall and hole then
-                    if golfBall:IsA("BasePart") then
-                        golfBall.CFrame = hole.CFrame
-                    elseif golfBall:IsA("Model") and golfBall.PrimaryPart then
-                        golfBall:SetPrimaryPartCFrame(hole.CFrame)
-                    end
-                end
-            end)
+                task.wait(5)
+            end
         end)
     end
 })
 
 Ronnie:Button({
-    Title = "Dunk Booth",
+    Title = "Auto Pop Balloon",
     Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                Event:FireServer("Section1/DunkThrow", 0.27402551854143786, -0.0085155691596274265)
-            end)
+            local safePos = Vector3.new(-136, 15, 248)
+            
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(-251, 15, -98)
+            task.wait(0.5)
+
+            local popTheBalloon = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games") and _w.Section1.Games:FindFirstChild("PopTheBalloon")
+            local cameraPart = popTheBalloon and popTheBalloon:FindFirstChild("Camera")
+            local prompt = cameraPart and cameraPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and cameraPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, cameraPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(cameraPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+
+            local throws = {
+                {0.92983092006390555, 0.89542727483312756},
+                {0.47093705174143813, 0.80153832697161831},
+                {0.036195629164746154, 0.74118300407687365},
+                {-0.49997853250524144, 0.92895904767845361},
+                {-0.85742993934714073, 0.86190105835211672},
+                {-0.88158521777057908, 0.063844312016687901},
+                {-0.43718631318775103, 0.050425747557683961},
+                {-0.0024464656540977578, 0.097370231554315942},
+                {0.52407672269342787, 0.14431387001724777},
+                {0.90085119312209305, 0.13090282980158738},
+                {0.95398411201377131, -0.82810749216782142},
+                {0.45644895597730872, -0.72080072975517329},
+                {0.026543031897521139, -0.74763104407419312},
+                {0.026543031897521139, -0.74763104407419312},
+                {-0.4178620035126015, -0.79457443089019031},
+                {-0.4178620035126015, -0.79457443089019031},
+                {-0.92989102209431795, -0.85493072010916382}
+            }
+
+            task.wait(0.5)
+            
+            for i = 1, 5 do
+                for _, coords in ipairs(throws) do
+                    pcall(function()
+                        Event:FireServer("Section1/DartsThrow", coords[1], coords[2])
+                    end)
+                    task.wait(0.5)
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Auto Dunk Booth",
+    Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        task.spawn(function()
+            local safePos = Vector3.new(-136, 15, 248)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(-89, 16, 100)
+            task.wait(0.5)
+
+            local games = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games")
+            local dunkBooth = games and games:FindFirstChild("DunkBooth")
+            local proxPart = dunkBooth and dunkBooth:FindFirstChild("ProxPart")
+            local prompt = proxPart and proxPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and proxPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, proxPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(proxPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+
+            for i = 1, 7 do
+                pcall(function()
+                    Event:FireServer("Section1/DunkThrow", 0.28738536237459611, 0.26089486988199567)
+                end)
+                task.wait(4)
+            end
+        end)
+    end
+})
+
+Ronnie:Button({
+    Title = "Auto Whack a Clown",
+    Callback = function()
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        task.spawn(function()
+            local safePos = Vector3.new(-136, 15, 248)
+            
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(-65, 15, -140)
+            task.wait(0.5)
+
+            local whackGame = _w:FindFirstChild("Section1") and _w.Section1:FindFirstChild("Games") and _w.Section1.Games:FindFirstChild("WhackAClown")
+            local hammer = whackGame and whackGame:FindFirstChild("Hammer")
+            local prompt = hammer and hammer:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and hammer then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, hammer.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(hammer.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            local clownsFolder = whackGame and whackGame:FindFirstChild("Clowns")
+            local playerGui = _l:WaitForChild("PlayerGui", 5)
+            local gui4 = playerGui and playerGui:WaitForChild("Gui4", 5)
+            local targetFrame = gui4 and gui4:GetChildren()[2]
+            local titleLabel = targetFrame and targetFrame:FindFirstChildOfClass("TextLabel")
+
+            while true do
+                if titleLabel and titleLabel.Visible and titleLabel.ContentText == "Whack a Clown" then
+                    for _, clown in ipairs(clownsFolder:GetChildren()) do
+                        if clown:FindFirstChildOfClass("Highlight") then
+                            Event:FireServer("Section1/Whack", clown)
+                        end
+                    end
+                    task.wait(0.05)
+                else
+                    task.wait(0.5)
+                end
+            end
         end)
     end
 })
@@ -754,7 +1092,7 @@ Dimitra:Toggle({
                             hl.FillTransparency = 0.4
                             hl.OutlineTransparency = 0
                             hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            hl.Parent = dimitr
+                            hl.Parent = dimitra
                         end
                     end)
                     task.wait(1)
@@ -764,52 +1102,193 @@ Dimitra:Toggle({
     end
 })
 
-Dimitra:Section("MiniGames")
-
 Dimitra:Button({
-    Title = "Star Relic",
+    Title = "Auto Moon Relic",
     Callback = function()
+        local _w = game:GetService("Workspace")
+        local _rs = game:GetService("ReplicatedStorage")
+        local _cam = _w.CurrentCamera
+        local _l = game:GetService("Players").LocalPlayer
+
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                for i = 1, 5 do
-                    Event:FireServer("Section2/StarPuzzleProgress", i)
-                    task.wait(0.1)
-                end
-                Event:FireServer("Section2/StarPuzzleComplete")
-            end)
+            local safePos = Vector3.new(2312, -61, 5250)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(1692, -61, 4494)
+            task.wait(0.5)
+
+            local p3 = _w:FindFirstChild("Section2") and _w.Section2:FindFirstChild("MainObjective") and _w.Section2.MainObjective:FindFirstChild("Puzzle3")
+            local promptPart = p3 and p3:FindFirstChild("PromptPart")
+            local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and promptPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, promptPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(promptPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            for i = 1, 8 do
+                Event:FireServer("Section2/MoonPuzzleProgress", i)
+                task.wait(0.1)
+            end
+            Event:FireServer("Section2/MoonPuzzleComplete")
         end)
     end
 })
 
 Dimitra:Button({
-    Title = "Moon Relic",
+    Title = "Auto Fate Relic",
     Callback = function()
+        local _w = game:GetService("Workspace")
+        local _rs = game:GetService("ReplicatedStorage")
+        local _cam = _w.CurrentCamera
+        local _l = game:GetService("Players").LocalPlayer
+
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                for i = 1, 8 do
-                    Event:FireServer("Section2/MoonPuzzleProgress", i)
-                    task.wait(0.1)
-                end
-                Event:FireServer("Section2/MoonPuzzleComplete")
-            end)
+            local safePos = Vector3.new(2312, -61, 5250)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(1824, -62, 4591)
+            task.wait(0.5)
+
+            local p4 = _w:FindFirstChild("Section2") and _w.Section2:FindFirstChild("MainObjective") and _w.Section2.MainObjective:FindFirstChild("Puzzle4")
+            local promptPart = p4 and p4:FindFirstChild("PromptPart")
+            local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and promptPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, promptPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(promptPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            for i = 1, 5 do
+                Event:FireServer("Section2/TarotPuzzleProgress", i)
+                task.wait(0.1)
+            end
+            Event:FireServer("Section2/TarotPuzzleComplete")
         end)
     end
 })
 
 Dimitra:Button({
-    Title = "Fate Relic",
+    Title = "Auto Star Relic",
     Callback = function()
+        local _w = game:GetService("Workspace")
+        local _rs = game:GetService("ReplicatedStorage")
+        local _cam = _w.CurrentCamera
+        local _l = game:GetService("Players").LocalPlayer
+
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
         task.spawn(function()
-            pcall(function()
-                local Event = game:GetService("ReplicatedStorage").modules.Packet.Reliable
-                for i = 1, 5 do
-                    Event:FireServer("Section2/TarotPuzzleProgress", i)
-                    task.wait(0.1)
-                end
-                Event:FireServer("Section2/TarotPuzzleComplete")
-            end)
+            local originalCF = hrp.CFrame
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(1584, -61, 4286)
+            task.wait(0.5)
+
+            local p1 = _w:FindFirstChild("Section2") and _w.Section2:FindFirstChild("MainObjective") and _w.Section2.MainObjective:FindFirstChild("Puzzle1")
+            local promptPart = p1 and p1:FindFirstChild("PromptPart")
+            local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and promptPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, promptPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(promptPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = originalCF
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            for i = 1, 5 do
+                Event:FireServer("Section2/StarPuzzleProgress", i)
+                task.wait(0.1)
+            end
+            Event:FireServer("Section2/StarPuzzleComplete")
         end)
     end
 })
@@ -1052,7 +1531,73 @@ Dimitra:Toggle({
     end
 })
 
-Dimitra:Section("Final Boss")
+Dimitra:Button({
+    Title = "Auto Wish for Leave",
+    Callback = function()
+        local _w = game:GetService("Workspace")
+        local _rs = game:GetService("ReplicatedStorage")
+        local _cam = _w.CurrentCamera
+        local _l = game:GetService("Players").LocalPlayer
+
+        local char = _l.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        task.spawn(function()
+            local safePos = Vector3.new(-136, 15, 248)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(1826, -89, 4346)
+            task.wait(0.5)
+
+            local section2 = _w:FindFirstChild("Section2")
+            local mainObj = section2 and section2:FindFirstChild("MainObjective")
+            local crystalWish = mainObj and mainObj:FindFirstChild("CrystalBallWish")
+            local promptPart = crystalWish and crystalWish:FindFirstChild("PromptPart")
+            local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+            if prompt and promptPart then
+                local maxDist = prompt.MaxActivationDistance
+                local originalCamType = _cam.CameraType
+                local originalCamCFrame = _cam.CFrame
+
+                prompt.MaxActivationDistance = 250
+                prompt.RequiresLineOfSight = false
+
+                _cam.CameraType = Enum.CameraType.Scriptable
+                _cam.CFrame = CFrame.new(_cam.CFrame.Position, promptPart.Position)
+
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                hrp.CFrame = CFrame.new(promptPart.Position)
+                task.wait(0.3)
+
+                pcall(function() prompt:InputHoldBegin() end)
+                task.wait(prompt.HoldDuration + 0.1)
+                pcall(function() prompt:InputHoldEnd() end)
+
+                _cam.CameraType = originalCamType
+                _cam.CFrame = originalCamCFrame
+                prompt.MaxActivationDistance = maxDist
+            end
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            hrp.CFrame = CFrame.new(safePos)
+            task.wait(0.5)
+
+            local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
+            pcall(function()
+                Event:FireServer("Section2/CrystalBallWishPick", "Leave")
+            end)
+        end)
+    end
+})
+
+Dimitra:Section("Final Stage")
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1150,6 +1695,62 @@ Dimitra:Toggle({
                 hrp.CFrame = OriginalPlayerCFrame
             end
             OriginalPlayerCFrame = nil
+        end
+    end
+})
+
+local bunnyAutoEnabled = false
+
+Dimitra:Toggle({
+    Title = "Auto Bunny",
+    Default = false,
+    Callback = function(state)
+        bunnyAutoEnabled = state
+        if state then
+            task.spawn(function()
+                local _w = game:GetService("Workspace")
+                local _cam = _w.CurrentCamera
+                local _l = game:GetService("Players").LocalPlayer
+                
+                while bunnyAutoEnabled do
+                    local bunny = _w:FindFirstChild("BunnySpawn")
+                    if bunny then
+                        local prompt = bunny:FindFirstChildWhichIsA("ProximityPrompt", true)
+                        local targetPart = bunny:IsA("BasePart") and bunny or bunny.PrimaryPart or bunny:FindFirstChildWhichIsA("BasePart")
+                        
+                        if prompt and prompt.Enabled and targetPart then
+                            local char = _l.Character
+                            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                local maxDist = prompt.MaxActivationDistance
+                                local originalCamType = _cam.CameraType
+                                local originalCamCFrame = _cam.CFrame
+                                
+                                prompt.MaxActivationDistance = 250
+                                prompt.RequiresLineOfSight = false
+                                _cam.CameraType = Enum.CameraType.Scriptable
+                                _cam.CFrame = CFrame.new(_cam.CFrame.Position, targetPart.Position)
+                                
+                                hrp.AssemblyLinearVelocity = Vector3.zero
+                                hrp.AssemblyAngularVelocity = Vector3.zero
+                                hrp.CFrame = CFrame.new(targetPart.Position)
+                                task.wait(0.3)
+                                
+                                pcall(function() prompt:InputHoldBegin() end)
+                                task.wait(prompt.HoldDuration + 0.1)
+                                pcall(function() prompt:InputHoldEnd() end)
+                                
+                                _cam.CameraType = originalCamType
+                                _cam.CFrame = originalCamCFrame
+                                prompt.MaxActivationDistance = maxDist
+                                
+                                task.wait(2)
+                            end
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
         end
     end
 })
