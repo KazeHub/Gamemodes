@@ -759,7 +759,7 @@ Ronnie:Button({
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
 
-            for i = 1, 7 do
+            for i = 1, 9 do
                 pcall(function()
                     Event:FireServer("Section1/BasketballHold")
                 end)
