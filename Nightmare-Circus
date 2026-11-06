@@ -1,5 +1,5 @@
 local success, KazeUILib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/testproject"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/KazeUIlite"))()
 end)
 local KazeUI = KazeUI or (success and KazeUILib)
 
@@ -14,12 +14,10 @@ local Window = KazeUI:CreateWindow({
     Version = "",
     Size = UDim2.fromOffset(700, 400),
     Icon = "79414074886215",
-    Theme = "https://images3.alphacoders.com/124/1244059.jpg",
-    GlowStyle = "Sequence",
-    GlowColor = true,
+    Theme = "Obsidian",           -- only theme that exists now
+    PerformanceMode = true,       -- keep it light
     HidableTab = true,
-    PerformanceMode = true,
-    
+
     PopupTitle = "Welcome to KAZE HUB",
     PopupContent = "Thank You for using my script!",
     DiscordLink = "https://discord.gg/DKGRny4DD",
@@ -29,7 +27,7 @@ local Window = KazeUI:CreateWindow({
 
     OpenButton = {
         Icon = "79414074886215",
-        Shape = "square", 
+        Shape = "square",
         Hidable = false,
         Size = UDim2.fromOffset(60, 60)
     },
@@ -502,40 +500,56 @@ local Ronnie = Window:CreateTab({
     Icon = "play"
 })
 
-local ronnieActive = false
+local espMonstersActive = false
+
+local function getMonsters()
+    local targets = {}
+    local s1 = workspace:FindFirstChild("Section1")
+    if s1 then
+        local m1 = s1:FindFirstChild("Monster")
+        if m1 and m1:FindFirstChild("Ronnie") then
+            table.insert(targets, m1.Ronnie)
+        end
+        
+        local m2 = s1:FindFirstChild("Monster2")
+        if m2 and m2:FindFirstChild("Bruno") then
+            table.insert(targets, m2.Bruno)
+        end
+    end
+    return targets
+end
 
 Ronnie:Toggle({
-    Title = "ESPRonnie",
+    Title = "ESP Roonie & Bruno",
     Default = false,
     Callback = function(state)
-        ronnieActive = state
-        if not ronnieActive then
-            pcall(function()
-                local ronnie = workspace.Section1.Monster.Ronnie
-                if ronnie and ronnie:FindFirstChild("KazeRonnieESP") then
-                    ronnie.KazeRonnieESP:Destroy()
-                end
-            end)
-        else
-            task.spawn(function()
-                while ronnieActive do
-                    pcall(function()
-                        local ronnie = workspace.Section1.Monster.Ronnie
-                        if ronnie and not ronnie:FindFirstChild("KazeRonnieESP") then
-                            local hl = Instance.new("Highlight")
-                            hl.Name = "KazeRonnieESP"
-                            hl.FillColor = Color3.fromRGB(255, 0, 0)
-                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            hl.FillTransparency = 0.4
-                            hl.OutlineTransparency = 0
-                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            hl.Parent = ronnie
-                        end
-                    end)
-                    task.wait(1)
-                end
-            end)
+        espMonstersActive = state
+        
+        if not espMonstersActive then
+            for _, target in ipairs(getMonsters()) do
+                local hl = target:FindFirstChild("KazeMonsterESP")
+                if hl then hl:Destroy() end
+            end
+            return
         end
+        
+        task.spawn(function()
+            while espMonstersActive do
+                for _, target in ipairs(getMonsters()) do
+                    if not target:FindFirstChild("KazeMonsterESP") then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "KazeMonsterESP"
+                        hl.FillColor = Color3.fromRGB(255, 0, 0)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.4
+                        hl.OutlineTransparency = 0
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Parent = target
+                    end
+                end
+                task.wait(0.5) -- Check every 0.5s for zero lag
+            end
+        end)
     end
 })
 
@@ -759,7 +773,7 @@ Ronnie:Button({
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
 
-            for i = 1, 9 do
+            for i = 1, 7 do
                 pcall(function()
                     Event:FireServer("Section1/BasketballHold")
                 end)
@@ -1116,7 +1130,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1462, -61, 4750)
+            local safePos = Vector3.new(2312, -61, 5250)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1180,7 +1194,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1462, -61, 4750)
+            local safePos = Vector3.new(2312, -61, 5250)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1244,8 +1258,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1462, -61, 4750)
-
+            local originalCF = hrp.CFrame
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
             hrp.CFrame = CFrame.new(1584, -61, 4286)
@@ -1281,7 +1294,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos)
+            hrp.CFrame = originalCF
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
