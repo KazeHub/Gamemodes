@@ -1,12 +1,6 @@
-local success, KazeUILib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/KazeUIlite"))()
-end)
-local KazeUI = KazeUI or (success and KazeUILib)
-
-if not KazeUI then
-    warn("Failed to load KazeUI library!")
-    return
-end
+local KazeUI = KazeUI or loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/KazeHub/UI/refs/heads/main/UILibrary.lua.txt"
+))()
 
 local Window = KazeUI:CreateWindow({
     Title = "NIGHTMARE CIRCUS",
@@ -498,6 +492,23 @@ GameTab:Button({
 local Ronnie = Window:CreateTab({
     Title = "Ronnie's Games",
     Icon = "play"
+})
+
+Ronnie:Button({
+    Title = "Skip Ronnie's Games",
+    Description = "",
+    Callback = function()
+        task.spawn(function()
+            local char = game:GetService("Players").LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                char:PivotTo(CFrame.new(2312, -61, 5250))
+            end
+        end)
+    end
 })
 
 local espMonstersActive = false
@@ -1310,7 +1321,7 @@ Dimitra:Button({
 local eyeRelicActive = false
 
 Dimitra:Toggle({
-    Title = "Eye Relic",
+    Title = "Eye Relic [Nightmare]",
     Default = false,
     Callback = function(Value)
         eyeRelicActive = Value
@@ -1424,7 +1435,7 @@ Dimitra:Toggle({
 local eyeRelicActive = false
 
 Dimitra:Toggle({
-    Title = "Eye Relic [The Hollow]",
+    Title = "Eye Relic [Normal]",
     Default = false,
     Callback = function(Value)
         eyeRelicActive = Value
@@ -1612,104 +1623,23 @@ Dimitra:Button({
 
 Dimitra:Section("Final Stage")
 
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local LP = Players.LocalPlayer
-local AutoBossEnabled = false
-local AutoBossConnection
-local OriginalHitboxSize
-local CachedHitbox
-local OriginalPlayerCFrame -- Dito natin ise-save ang original position mo
-
-Dimitra:Toggle({
-    Title = "Auto Boss",
-    Default = false,
-    Callback = function(state)
-        AutoBossEnabled = state
-
-        if AutoBossConnection then
-            AutoBossConnection:Disconnect()
-            AutoBossConnection = nil
-        end
-
-        local section = workspace:FindFirstChild("Section3")
-        local boss = section and section:FindFirstChild("DimitraBOSS")
-        local hitbox = boss and boss:FindFirstChild("PlayerHitbox")
-
-        if state then
-            -- I-save ang kasalukuyang posisyon mo bago mag-teleport sa boss
-            local character = LP.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if root then
-                OriginalPlayerCFrame = root.CFrame
-            end
-
-            if hitbox and hitbox:IsA("BasePart") then
-                CachedHitbox = hitbox
-                OriginalHitboxSize = hitbox.Size
-                hitbox.Size = Vector3.new(50, 50, 50)
-            end
-
-            AutoBossConnection = RunService.Heartbeat:Connect(function()
-                if not AutoBossEnabled then return end
-
-                local char = LP.Character
-                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                if not (boss and boss.Parent and humanoid and hrp and humanoid.Health > 0) then
-                    return
-                end
-
-                local axe = char:FindFirstChild("MagicAxe")
-                    or (LP:FindFirstChild("Backpack") and LP.Backpack:FindFirstChild("MagicAxe"))
-
-                if axe and axe.Parent ~= char then
-                    humanoid:EquipTool(axe)
-                end
-
-                local bossPart = boss:FindFirstChild("HumanoidRootPart")
-                    or boss.PrimaryPart
-                    or boss:FindFirstChildWhichIsA("BasePart")
-
-                if not bossPart then return end
-
-                local targetPosition = bossPart.Position - Vector3.new(0, 15, 0)
-                hrp.CFrame = CFrame.lookAt(targetPosition, bossPart.Position)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-
-                -- Damage Hack Spam
-                local modules = ReplicatedStorage:FindFirstChild("modules")
-                local reliable = modules and modules:FindFirstChild("Packet") and modules.Packet:FindFirstChild("Reliable")
+Dimitra:Button({
+    Title = "Instant Kill",
+    Description = "",
+    Callback = function()
+        task.spawn(function()
+            local boss = workspace:FindFirstChild("Section3") 
+                and workspace.Section3:FindFirstChild("DimitraBOSS")
                 
-                if reliable then
-                    pcall(function()
-                        reliable:FireServer("MagicAxe/SwingHit")
-                    end)
+            if boss then
+                local humanoid = boss:FindFirstChildOfClass("Humanoid")
+                
+                if humanoid then
+                    -- I-set ang health sa 0 para mamatay agad
+                    humanoid.Health = 0
                 end
-            end)
-        else
-            -- Ibalik ang hitbox sa dati
-            if CachedHitbox and CachedHitbox.Parent and OriginalHitboxSize then
-                CachedHitbox.Size = OriginalHitboxSize
             end
-
-            CachedHitbox = nil
-            OriginalHitboxSize = nil
-
-            -- Ibalik ang player sa original position kung saan mo ito ni-on
-            local char = LP.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp and OriginalPlayerCFrame then
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-                hrp.CFrame = OriginalPlayerCFrame
-            end
-            OriginalPlayerCFrame = nil
-        end
+        end)
     end
 })
 
