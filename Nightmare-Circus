@@ -1141,7 +1141,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(2312, -61, 5250)
+            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1178,7 +1178,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos)
+            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1205,7 +1205,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(2312, -61, 5250)
+            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1242,7 +1242,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos)
+            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1269,7 +1269,8 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local originalCF = hrp.CFrame
+            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
+
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
             hrp.CFrame = CFrame.new(1584, -61, 4286)
@@ -1305,7 +1306,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = originalCF
+            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1314,6 +1315,23 @@ Dimitra:Button({
                 task.wait(0.1)
             end
             Event:FireServer("Section2/StarPuzzleComplete")
+        end)
+    end
+})
+
+Dimitra:Button({
+    Title = "Teleport to Eye Relic",
+    Description = "",
+    Callback = function()
+        task.spawn(function()
+            local char = game:GetService("Players").LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+                char:PivotTo(CFrame.new(1812, -61, 4520))
+            end
         end)
     end
 })
