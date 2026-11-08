@@ -505,7 +505,7 @@ Ronnie:Button({
             if hrp then
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
-                char:PivotTo(CFrame.new(2312, -61, 5250))
+                char:PivotTo(CFrame.new(1812, -61, 4520))
             end
         end)
     end
@@ -1141,7 +1141,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
+            local safePos = Vector3.new(1812, -61, 4520)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1178,7 +1178,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
+            hrp.CFrame = CFrame.new(safePos)
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1205,7 +1205,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
+            local safePos = Vector3.new(1812, -61, 4520)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1242,7 +1242,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
+            hrp.CFrame = CFrame.new(safePos)
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1269,7 +1269,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(1465, -61, 4749) -- Bagong safe position
+            local safePos = Vector3.new(1812, -61, 4520)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
@@ -1306,7 +1306,7 @@ Dimitra:Button({
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
-            hrp.CFrame = CFrame.new(safePos) -- Balik sa bagong safe position
+            hrp.CFrame = CFrame.new(safePos)
             task.wait(0.5)
 
             local Event = _rs:WaitForChild("modules"):WaitForChild("Packet"):WaitForChild("Reliable")
@@ -1588,7 +1588,7 @@ Dimitra:Button({
         if not hrp then return end
 
         task.spawn(function()
-            local safePos = Vector3.new(-136, 15, 248)
+            local safePos = Vector3.new(1812, -61, 4520)
 
             hrp.AssemblyLinearVelocity = Vector3.zero
             hrp.AssemblyAngularVelocity = Vector3.zero
